@@ -54,14 +54,15 @@ def HexFunnel(lower_radius=10, upper_radius=20, inner_radius=5, height=30, minim
         with BuildSketch(Plane(origin=(0, 0,height), z_dir=(0, 0, 1))) as cone_top:
             RegularPolygon(radius=upper_radius, side_count=6)
             fillet(vertices(), radius=upper_radius/4)
-        loft()
+        loft()           
+
     with BuildPart() as inner_funnel:
         with BuildSketch(Plane(origin=(0, 0,0), z_dir=(0, 0, 1))) as funnel_base:
             Circle(inner_radius)
         with BuildSketch(Plane(origin=(0, 0,height), z_dir=(0, 0, 1))) as funnel_top:            
-            Circle((upper_radius/2*sqrt(2))-minimum_wall)
+            Circle((upper_radius/2*sqrt(3))-minimum_wall)
         loft()
-    
+     
     funnel = Part(outer_funnel.part - inner_funnel.part)
     
     if minimum_wall > 0:
@@ -164,13 +165,13 @@ def BuildInternalFitting():
             add(HexFunnel(
                 lower_radius=shaft_diameter/2 + fitting_depth, 
                 upper_radius=(shaft_diameter/2 + fitting_depth) * funnel_top_scale, 
-                inner_radius=tube_inner_diameter/2+(tube_outer_diameter-tube_inner_diameter)/4,
+                inner_radius=tube_inner_diameter/2,
                 height=funnel_length,
-                minimum_wall = 1,
+                minimum_wall = 1.5,
                 )
             )
+        
     return Part(children=[inner_fitting.part, fitting_nut_thread])
-
 
 external_fitting = BuildExternalFitting()
 internal_fitting = BuildInternalFitting()           
