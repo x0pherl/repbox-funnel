@@ -2,7 +2,6 @@ from build123d import *
 from ocp_vscode import *
 from bd_warehouse.thread import  TrapezoidalThread
 from math import sqrt
-import json
 from configparser import ConfigParser
 
 config=ConfigParser()
@@ -19,7 +18,8 @@ bend_angle = config.getfloat('bend', 'angle', fallback=10)
 fitting_diameter = config.getfloat('fitting', 'diameter', fallback=17.5)
 fitting_depth = config.getfloat('fitting', 'depth', fallback=4.5)
 fitting_pitch = config.getfloat('fitting', 'pitch', fallback=2)
-
+hex_diameter = config.getfloat('fitting', 'hex_diameter', fallback=21)
+hex_depth = config.getfloat('fitting', 'hex_depth', fallback=5)
 funnel_length = config.getfloat('funnel', 'length', fallback=40)
 funnel_top_scale = config.getfloat('funnel', 'top_scale', fallback=1.5)
 
@@ -43,34 +43,62 @@ def ConeFunnel(lower_radius=10, upper_radius=20, inner_radius=5, height=30, mini
     funnel = Part(outer_funnel.part - inner_funnel.part)
     
     if minimum_wall > 0:
-        funnel = funnel.fillet(radius=minimum_wall/3, edge_list=funnel.edges().sort_by(Axis.Z)[-2:])
+        funnel = funnel.fillet(radius=minimum_wall/4, edge_list=funnel.edges().sort_by(Axis.Z)[-2:])
     return funnel
 
-def SocketBase():
+def HexFunnel(lower_radius=10, upper_radius=20, inner_radius=5, height=30, minimum_wall=0):
+    with BuildPart() as outer_funnel:
+        with BuildSketch(Plane(origin=(0, 0,0), z_dir=(0, 0, 1))) as cone_base:
+            RegularPolygon(radius=lower_radius, side_count=6)
+            fillet(vertices(), radius=lower_radius/4)
+        with BuildSketch(Plane(origin=(0, 0,height), z_dir=(0, 0, 1))) as cone_top:
+            RegularPolygon(radius=upper_radius, side_count=6)
+            fillet(vertices(), radius=upper_radius/4)
+        loft()
+    with BuildPart() as inner_funnel:
+        with BuildSketch(Plane(origin=(0, 0,0), z_dir=(0, 0, 1))) as funnel_base:
+            Circle(inner_radius)
+        with BuildSketch(Plane(origin=(0, 0,height), z_dir=(0, 0, 1))) as funnel_top:            
+            Circle((upper_radius/2*sqrt(2))-minimum_wall)
+        loft()
+    
+    funnel = Part(outer_funnel.part - inner_funnel.part)
+    
+    if minimum_wall > 0:
+        wall_edges = funnel.edges().sort_by(Axis.Z)[-2:]
+        max_fillet_radius = funnel.max_fillet(wall_edges,max_iterations=100)
+        funnel = funnel.fillet(radius=max_fillet_radius, edge_list=wall_edges)
+    return funnel
+
+def SocketBase(chamfer_thread=True):
     with BuildPart() as socket_base:
         with BuildSketch():
-            Circle(shaft_diameter/2 + fitting_depth)
+            RegularPolygon(radius=hex_diameter/2, side_count=6)
             Circle((shaft_diameter+fitting_pitch)/2, mode=Mode.SUBTRACT)
         extrude(amount=shaft_length)
-        chamfer(
-            socket_base.edges()
-            .filter_by(GeomType.CIRCLE)
-            .sort_by(SortBy.RADIUS)
-            .sort_by(Axis.Z)[0],
-            length=fitting_pitch/2,
-            )
+        if chamfer_thread: 
+            chamfer(
+                socket_base.edges()
+                .filter_by(GeomType.CIRCLE)
+                .sort_by(SortBy.RADIUS)
+                .sort_by(Axis.Z)[0],
+                length=fitting_pitch/2,
+                )
+        fillet(socket_base.edges().filter_by(Axis.Z), radius=hex_diameter/7)
     return(socket_base.part)
 
 def Bend():
     with BuildPart() as bend:
         with BuildSketch() as x2:
             with Locations((0, connector_diameter*2)):
-                Circle(shaft_diameter/2 + fitting_depth)
+                RegularPolygon(radius=hex_diameter/2, side_count=6)
+                fillet(vertices(), radius=hex_diameter/8)
                 Circle(tube_outer_diameter/2, mode=Mode.SUBTRACT)
-        revolve(axis=Axis.X, revolution_arc=bend_angle)    
+        revolve(axis=Axis.X, revolution_arc=bend_angle)  
     return bend.part.moved(Location((0,-connector_diameter*2,0)))
 
 def BuildExternalFitting():
+    chamfer_radius = (shaft_diameter-tube_outer_diameter)/8
     fitting_nut_thread =  TrapezoidalThread(
         diameter=connector_diameter,
         pitch=connector_pitch,
@@ -84,10 +112,10 @@ def BuildExternalFitting():
     shaft_thread =  TrapezoidalThread(
         diameter=shaft_diameter,
         pitch=fitting_pitch,
-        length=shaft_length-fitting_depth-(shaft_diameter-tube_outer_diameter)/8,
+        length=shaft_length-fitting_depth-chamfer_radius,
         thread_angle = 30.0,
         external=True,
-        end_finishes=("square","chamfer"),
+        end_finishes=("square","fade"),
         hand="right",
         align=Align.CENTER,
         ).moved(Location((0,0,connector_depth+fitting_depth)))
@@ -111,7 +139,7 @@ def BuildExternalFitting():
             .filter_by(GeomType.CIRCLE)
             .sort_by(SortBy.RADIUS)
             .sort_by(Axis.Z)[-1],
-            length=(shaft_diameter-tube_outer_diameter)/8,
+            length=chamfer_radius,
         )
         
     return Part(children=[outer_fitting.part, fitting_nut_thread,shaft_thread])
@@ -120,23 +148,23 @@ def BuildInternalFitting():
     fitting_nut_thread =  TrapezoidalThread(
         diameter=shaft_diameter+fitting_pitch,
         pitch=fitting_pitch,
-        length=shaft_length-fitting_pitch/2,
+        length=shaft_length,
         thread_angle = 30.0,
         external=False,
         hand="right",
         align=Align.CENTER,
-        ).moved(Location((0,0,fitting_pitch/2)))
+        )
 
     with BuildPart() as inner_fitting:
         with BuildPart() as socket_base:
-            add(SocketBase())
+            add(SocketBase(chamfer_thread=False))
         with BuildPart(socket_base.faces().sort_by(Axis.Z)[-1]) as bend:
             add(Bend())
         with BuildPart(bend.faces().sort_by(Axis.Z)[-1]) as funnel:
-            add(ConeFunnel(
+            add(HexFunnel(
                 lower_radius=shaft_diameter/2 + fitting_depth, 
                 upper_radius=(shaft_diameter/2 + fitting_depth) * funnel_top_scale, 
-                inner_radius=tube_inner_diameter/2,
+                inner_radius=tube_inner_diameter/2+(tube_outer_diameter-tube_inner_diameter)/4,
                 height=funnel_length,
                 minimum_wall = 1,
                 )
@@ -150,5 +178,10 @@ internal_fitting = BuildInternalFitting()
 show(internal_fitting)
 #show(external_fitting)
 
-export_stl(external_fitting, "../stls/outer-fitting.stl",tolerance=.0005)
-export_stl(internal_fitting, "../stls/inner-funnel.stl",tolerance=.0005)
+#need to make sure the directories are there
+export_stl(external_fitting, "../stl/outer-fitting.stl",tolerance=.0001)
+export_stl(internal_fitting, "../stl/inner-funnel.stl",tolerance=.0001)
+
+#todo -- external fitting doesn't export properly -- why
+#export_step(external_fitting, "../step/outer-fitting.step")
+export_step(internal_fitting, "../step/inner-funnel.step")

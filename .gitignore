@@ -1,8 +1,8 @@
 # ignore build123d binary output
 *.stl
 *.step
-stls/
-step/
+stl/*
+step/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
