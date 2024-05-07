@@ -4,7 +4,7 @@ from bd_warehouse.thread import  TrapezoidalThread
 from math import sqrt
 from configparser import ConfigParser
 
-revision_text = "1.0"
+revision_text = "R1.0"
 
 config=ConfigParser()
 config.read('settings.ini')
@@ -91,6 +91,9 @@ def SocketBase(chamfer_thread=True):
                 length=fitting_pitch/2,
                 )
         fillet(socket_base.edges().filter_by(Axis.Z), radius=hex_diameter/7)
+        with BuildSketch(socket_base.faces().sort_by(Axis.Y)[0]) as ex34_sk:
+            Text(revision_text, font_path="c:\\Windows\\Fonts\\Flamante-Round-Bold.otf", font_size=3, align=(Align.CENTER, Align.CENTER))
+        extrude(amount=-.4, mode=Mode.SUBTRACT)
     return(socket_base.part)
 
 def Bend():
@@ -131,6 +134,9 @@ def BuildExternalFitting():
         with BuildSketch():
             RegularPolygon(radius=fitting_diameter/2, side_count=6)
         extrude(amount=connector_depth)
+        with BuildSketch(outer_fitting.faces().sort_by(Axis.Y)[0]) as ex34_sk:
+            Text(revision_text, font_path="c:\\Windows\\Fonts\\Flamante-Round-Bold.otf", font_size=3, align=(Align.CENTER, Align.CENTER))
+        extrude(amount=-.4, mode=Mode.SUBTRACT)
         with Locations(outer_fitting.faces().sort_by(Axis.Z)[0]):
             CounterSinkHole(radius=connector_diameter/2, counter_sink_radius=connector_diameter/2+connector_pitch/2)
         with BuildSketch(outer_fitting.faces().sort_by(Axis.Z)[-1]):
@@ -184,7 +190,7 @@ external_fitting = BuildExternalFitting()
 internal_fitting = BuildInternalFitting()           
 
 #show(internal_fitting)
-show(internal_fitting)
+show(external_fitting)
 
 #need to make sure the directories are there
 export_stl(external_fitting, "../stl/outer-fitting.stl",tolerance=.0001)
