@@ -31,6 +31,8 @@ funnel_top_scale = config.getfloat('funnel', 'top_scale', fallback=1.5)
 tube_outer_diameter = config.getfloat('tube', 'outer_diameter', fallback=6.5)
 tube_inner_diameter = config.getfloat('tube', 'inner_diameter', fallback=3.5)
 
+font_path = config.get('general', 'font-path', fallback='C://Windows//Fonts//Arial.ttf')
+
 def ConeFunnel(lower_radius=10, upper_radius=20, inner_radius=5, height=30, minimum_wall=0):
     with BuildPart() as outer_funnel:
         with BuildSketch(Plane(origin=(0, 0,0), z_dir=(0, 0, 1))) as cone_base:
@@ -92,7 +94,7 @@ def SocketBase(chamfer_thread=True):
                 )
         fillet(socket_base.edges().filter_by(Axis.Z), radius=hex_diameter/7)
         with BuildSketch(socket_base.faces().sort_by(Axis.Y)[0]) as ex34_sk:
-            Text(revision_text, font_path="c:\\Windows\\Fonts\\Flamante-Round-Bold.otf", font_size=3, align=(Align.CENTER, Align.CENTER))
+            Text(revision_text, font_path=font_path, font_size=3, align=(Align.CENTER, Align.CENTER))
         extrude(amount=-.4, mode=Mode.SUBTRACT)
     return(socket_base.part)
 
@@ -135,7 +137,7 @@ def BuildExternalFitting():
             RegularPolygon(radius=fitting_diameter/2, side_count=6)
         extrude(amount=connector_depth)
         with BuildSketch(outer_fitting.faces().sort_by(Axis.Y)[0]) as ex34_sk:
-            Text(revision_text, font_path="c:\\Windows\\Fonts\\Flamante-Round-Bold.otf", font_size=3, align=(Align.CENTER, Align.CENTER))
+            Text(revision_text, font_path=font_path, font_size=3, align=(Align.CENTER, Align.CENTER))
         extrude(amount=-.4, mode=Mode.SUBTRACT)
         with Locations(outer_fitting.faces().sort_by(Axis.Z)[0]):
             CounterSinkHole(radius=connector_diameter/2, counter_sink_radius=connector_diameter/2+connector_pitch/2)
