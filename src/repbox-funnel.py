@@ -4,6 +4,8 @@ from bd_warehouse.thread import  TrapezoidalThread
 from math import sqrt
 from configparser import ConfigParser
 
+revision_text = "1.0"
+
 config=ConfigParser()
 config.read('settings.ini')
 connector_depth = config.getfloat('connector','depth',fallback=6.5)
@@ -11,15 +13,18 @@ connector_diameter = config.getfloat('connector', 'diameter', fallback=10.1)
 connector_pitch = config.getfloat('connector', 'pitch', fallback=0.874)
 
 shaft_length = config.getfloat('shaft', 'length', fallback=20)
-shaft_diameter = config.getfloat('shaft', 'diameter', fallback=12.5)
+shaft_diameter = config.getfloat('shaft', 'diameter', fallback=11.5)
 
 bend_angle = config.getfloat('bend', 'angle', fallback=10)
 
 fitting_diameter = config.getfloat('fitting', 'diameter', fallback=17.5)
 fitting_depth = config.getfloat('fitting', 'depth', fallback=4.5)
-fitting_pitch = config.getfloat('fitting', 'pitch', fallback=2)
+fitting_pitch = config.getfloat('fitting', 'pitch', fallback=1.25 )
+fitting_tolerance = config.getfloat('fitting', 'tolerance', fallback=0.5)
+
 hex_diameter = config.getfloat('fitting', 'hex_diameter', fallback=21)
 hex_depth = config.getfloat('fitting', 'hex_depth', fallback=5)
+
 funnel_length = config.getfloat('funnel', 'length', fallback=40)
 funnel_top_scale = config.getfloat('funnel', 'top_scale', fallback=1.5)
 
@@ -75,7 +80,7 @@ def SocketBase(chamfer_thread=True):
     with BuildPart() as socket_base:
         with BuildSketch():
             RegularPolygon(radius=hex_diameter/2, side_count=6)
-            Circle((shaft_diameter+fitting_pitch)/2, mode=Mode.SUBTRACT)
+            Circle((shaft_diameter+fitting_tolerance)/2, mode=Mode.SUBTRACT)
         extrude(amount=shaft_length)
         if chamfer_thread: 
             chamfer(
@@ -115,8 +120,9 @@ def BuildExternalFitting():
         pitch=fitting_pitch,
         length=shaft_length-fitting_depth-chamfer_radius,
         thread_angle = 30.0,
-        external=True,
-        end_finishes=("square","fade"),
+        external=True, 
+        interference=fitting_tolerance,
+        end_finishes=("square","chamfer"),
         hand="right",
         align=Align.CENTER,
         ).moved(Location((0,0,connector_depth+fitting_depth)))
@@ -143,15 +149,16 @@ def BuildExternalFitting():
             length=chamfer_radius,
         )
         
-    return Part(children=[outer_fitting.part, fitting_nut_thread,shaft_thread])
+    return Part(children=[outer_fitting.part, fitting_nut_thread, shaft_thread])
 
 def BuildInternalFitting():
     fitting_nut_thread =  TrapezoidalThread(
-        diameter=shaft_diameter+fitting_pitch,
+        diameter=shaft_diameter+fitting_tolerance,
         pitch=fitting_pitch,
         length=shaft_length,
         thread_angle = 30.0,
         external=False,
+        end_finishes=("square","square"),
         hand="right",
         align=Align.CENTER,
         )
@@ -176,13 +183,14 @@ def BuildInternalFitting():
 external_fitting = BuildExternalFitting()
 internal_fitting = BuildInternalFitting()           
 
+#show(internal_fitting)
 show(internal_fitting)
-#show(external_fitting)
 
 #need to make sure the directories are there
 export_stl(external_fitting, "../stl/outer-fitting.stl",tolerance=.0001)
 export_stl(internal_fitting, "../stl/inner-funnel.stl",tolerance=.0001)
 
-#todo -- external fitting doesn't export properly -- why
-#export_step(external_fitting, "../step/outer-fitting.step")
+# todo -- external fitting doesn't export properly -- why
+# definitely in the thread parts, cutting them results in a clean export
+# export_step(external_fitting, "../step/outer-fitting.step")
 export_step(internal_fitting, "../step/inner-funnel.step")
