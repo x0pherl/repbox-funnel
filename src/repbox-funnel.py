@@ -31,7 +31,7 @@ funnel_top_scale = config.getfloat('funnel', 'top_scale', fallback=1.5)
 tube_outer_diameter = config.getfloat('tube', 'outer_diameter', fallback=6.5)
 tube_inner_diameter = config.getfloat('tube', 'inner_diameter', fallback=3.5)
 
-font_path = config.get('general', 'font-path', fallback='C://Windows//Fonts//Arial.ttf')
+font_path = config.get('general', 'font-path', fallback='C:\\Windows\\Fonts\\arial.ttf')
 
 def ConeFunnel(lower_radius=10, upper_radius=20, inner_radius=5, height=30, minimum_wall=0):
     with BuildPart() as outer_funnel:
@@ -191,8 +191,8 @@ def BuildInternalFitting():
 external_fitting = BuildExternalFitting()
 internal_fitting = BuildInternalFitting()           
 
-#show(internal_fitting)
-show(external_fitting)
+show(internal_fitting)
+#show(external_fitting)
 
 #need to make sure the directories are there
 export_stl(external_fitting, "../stl/outer-fitting.stl",tolerance=.0001)
