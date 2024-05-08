@@ -19,6 +19,8 @@ connector_pitch = config.getfloat('connector', 'pitch', fallback=0.874)
 
 shaft_length = config.getfloat('shaft', 'length', fallback=20)
 shaft_diameter = config.getfloat('shaft', 'diameter', fallback=11.5)
+shaft_interference = config.getfloat('shaft', 'interference', fallback=0.5)
+
 
 bend_angle = config.getfloat('bend', 'angle', fallback=10)
 
@@ -137,7 +139,7 @@ def build_external_fitting():
         length=shaft_length-fitting_depth-chamfer_radius,
         thread_angle = 30.0,
         external=True,
-        interference=fitting_tolerance,
+        interference=shaft_interference,
         end_finishes=("square","chamfer"),
         hand="right",
         align=Align.CENTER,
