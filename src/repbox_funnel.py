@@ -7,7 +7,7 @@ from build123d import (BuildPart, BuildSketch,
                        vertices, extrude, chamfer, Text, Compound,
                        Mode, Location, Locations, revolve, CounterSinkHole,
                        Align, GeomType, SortBy, Axis, export_step, export_stl, add)
-from math import floor
+from ocp_vscode import show
 from lib.funnels import hex_funnel
 
 REVISION_TEXT = "R1.0"
