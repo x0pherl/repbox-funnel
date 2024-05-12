@@ -4,7 +4,7 @@ repbox-funnel is a 3d printable funnel to make it easier to guide filament from 
 
 ## Code
 
-The source file, `repbox-funnel.py` is used to generate the .stl files -- the 3d models. This code can be modified to create variants of these models.
+The source file, `build.py` is used to generate the .stl files -- the 3d models. The other python files represent the shapes that are generated. The various parameters and tolerances are all stored in the .ini files -- it's possible to generate new sized parts by modifying those and executing `python3 ./build.py`
 
 ## Recommended Print Settings
 layer height: .15mm or lower (lower layer heights reduce friction if the filament is rubbing against the funnel feed)
